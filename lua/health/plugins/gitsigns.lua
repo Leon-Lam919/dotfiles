@@ -8,12 +8,13 @@ return {
     opts = {
       on_attach = function(bufnr)
         local gitsigns = require 'gitsigns'
-
         local function map(mode, l, r, opts)
           opts = opts or {}
           opts.buffer = bufnr
           vim.keymap.set(mode, l, r, opts)
         end
+
+        gitsigns.setup { sign_priority = 5 }
 
         -- Navigation
         map('n', ']c', function()

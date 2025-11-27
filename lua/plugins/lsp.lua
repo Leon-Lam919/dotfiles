@@ -1,4 +1,4 @@
--- LSP Configuration
+-- LSP Configurationlsp
 return {
   -- Lazydev for Lua LSP
   {
@@ -73,11 +73,62 @@ return {
         end,
       })
 
+      -- Diagnostic signs with higher priority than gitsigns
+      vim.diagnostic.config {
+        signs = { priority = 20 }, -- default is 10
+        virtual_text = true,
+        underline = true,
+        severity_sort = true,
+      }
+
+      for type, icon in pairs { Error = 'E', Warn = 'W', Hint = 'H', Info = 'I' } do
+        local hl = 'DiagnosticSign' .. type
+        vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = '' })
+      end
+      -- Show diagnostics in a floating window when you hover
+      vim.o.updatetime = 250 -- make CursorHold trigger faster
+
+      vim.api.nvim_create_autocmd('CursorHold', {
+        callback = function()
+          local opts = {
+            focusable = false,
+            close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter', 'FocusLost' },
+            border = 'rounded',
+            source = 'always',
+            prefix = ' ',
+            scope = 'cursor',
+          }
+          vim.diagnostic.open_float(nil, opts)
+        end,
+      })
+
+      -- Define on_attach once
+      local on_attach = function(client, bufnr)
+        -- Example: show diagnostics in a floating window on CursorHold
+        vim.o.updatetime = 250
+        vim.api.nvim_create_autocmd('CursorHold', {
+          buffer = bufnr,
+          callback = function()
+            vim.diagnostic.open_float(nil, { focusable = false })
+          end,
+        })
+
+        -- Example: keymaps for LSP
+        local opts = { buffer = bufnr, noremap = true, silent = true }
+        vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
+        vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
+        vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
+      end
+
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
       local servers = {
-        clangd = {},
+        clangd = {
+          on_attach = on_attach,
+          cmd = { 'clangd' },
+          filetypes = { 'c', 'cpp', 'objc', 'objcpp' },
+        },
         gopls = {},
         pyright = {},
         html = {
@@ -209,17 +260,11 @@ return {
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
-      require('lspconfig').html.setup {
+      local lspconfig = require 'lspconfig'
+
+      lspconfig.html.setup {
         capabilities = capabilities,
-        settings = {
-          html = {
-            format = {
-              enable = true,
-              wrapLineLength = 120,
-              wrapAttributes = 'auto',
-            },
-          },
-        },
+        settings = { html = { format = { enable = true } } },
       }
 
       require('mason-lspconfig').setup {
@@ -229,8 +274,7 @@ return {
               settings = servers.jdtls.settings,
               capabilities = vim.tbl_deep_extend('force', capabilities, servers.jdtls.capabilities or {}),
               root_dir = function(fname)
-                return require('lspconfig.util').root_pattern('pom.xml', 'build.gradle', '.git')(fname)
-                  or vim.fn.getcwd()
+                return require('lspconfig.util').root_pattern('pom.xml', 'build.gradle', '.git')(fname) or vim.fn.getcwd()
               end,
               on_attach = function(client, bufnr)
                 local map = function(keys, func, desc)
