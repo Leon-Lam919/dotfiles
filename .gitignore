@@ -5,3 +5,16 @@ nvim
 
 spell/
 lazy-lock.json
+
+# Nvim generated/cache files
+nvim/coc/
+nvim/doc/
+nvim/gh/
+nvim/go/
+nvim/plugin/packer_compiled.lua
+nvim/.luarc.json
+nvim/.netrwhist
+
+# Optional: some people commit lock files, some don't
+# nvim/lazy-lock.json
+# nvim/plugin/packer_compiled.lua
